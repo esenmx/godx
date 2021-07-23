@@ -31,7 +31,7 @@ func TestMethods(t *testing.T) {
 		assert.Equal(t, 1, s.Size())
 		assert.True(t, s.Contains(42))
 	})
-	t.Run("AddAll/RemoveAll/ContainsAll", func(t *testing.T) {
+	t.Run("AddAll/RemoveAll/ContainsAll/RetainAll", func(t *testing.T) {
 		s := NewHashSet()
 		s.AddAll(42, "foo")
 		assert.True(t, s.ContainsAll(42, "foo"))
@@ -41,6 +41,7 @@ func TestMethods(t *testing.T) {
 		assert.Equal(t, 3, s.Size())
 		s.RemoveAll(42, "bar", "baz")
 		assert.Equal(t, 1, s.Size())
+		// todo
 	})
 	t.Run("Any/Every/ForEach/Where", func(t *testing.T) {
 		size := 100

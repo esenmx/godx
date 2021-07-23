@@ -1,4 +1,4 @@
-module github.com/softronaut/gods
+module github.com/softronaut/godx
 
 go 1.16
 

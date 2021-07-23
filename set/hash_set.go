@@ -28,13 +28,16 @@ type HashSetInterface interface {
 	Join(string) string
 	Remove(interface{}) bool
 	RemoveAll(...interface{})
+	RetainAll(set *HashSet)
 	Size() interface{}
 	ToArray() []interface{}
 	Union(*HashSet) *HashSet
 	Where(func(interface{}) bool) *HashSet
 }
 
-var _ HashSetInterface = (*HashSet)(nil)
+func assertHashSetInterface() {
+	var _ HashSetInterface = (*HashSet)(nil)
+}
 
 func NewHashSet(args ...interface{}) *HashSet {
 	elements := make(map[interface{}]void, len(args))
@@ -193,6 +196,18 @@ func (hs *HashSet) RemoveAll(args ...interface{}) {
 		delete(hs.hash, v)
 	}
 	hs.mutex.Unlock()
+}
+
+func (hs *HashSet) RetainAll(other *HashSet) {
+	hs.mutex.Lock()
+	other.mutex.RLock()
+	for k := range hs.hash {
+		if _, ok := other.hash[k]; !ok {
+			delete(hs.hash, k)
+		}
+	}
+	hs.mutex.Unlock()
+	other.mutex.RUnlock()
 }
 
 func (hs *HashSet) Size() interface{} {
