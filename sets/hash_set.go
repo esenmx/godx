@@ -1,12 +1,11 @@
-package set
+package sets
 
 import (
 	"fmt"
+	"github.com/softronaut/godx/pkg"
 	"strings"
 	"sync"
 )
-
-type void struct{}
 
 type HashSet struct {
 	hash  map[interface{}]void
@@ -14,52 +13,53 @@ type HashSet struct {
 }
 
 type HashSetInterface interface {
+	pkg.Interface
 	Add(interface{}) bool
-	AddAll(...interface{})
-	Any(func(interface{}) bool) bool
+	AddAll(other ...interface{})
+	Any(predicate func(interface{}) bool) bool
 	Clear()
-	Contains(interface{}) bool
+	Contains(element interface{}) bool
 	ContainsAll(...interface{}) bool
 	Difference(*HashSet) *HashSet
 	Every(func(interface{}) bool) bool
 	ForEach(func(interface{}))
 	Intersection(*HashSet) *HashSet
-	IsEmpty() bool
 	Join(string) string
+	Map(func(interface{}) interface{}) []interface{}
 	Remove(interface{}) bool
 	RemoveAll(...interface{})
 	RetainAll(set *HashSet)
-	Size() interface{}
+	Size() int
 	ToArray() []interface{}
 	Union(*HashSet) *HashSet
 	Where(func(interface{}) bool) *HashSet
+}
+
+func NewHashSet(elements ...interface{}) *HashSet {
+	hash := make(map[interface{}]void, len(elements))
+	for _, v := range elements {
+		hash[v] = void{}
+	}
+	return &HashSet{hash: hash}
 }
 
 func assertHashSetInterface() {
 	var _ HashSetInterface = (*HashSet)(nil)
 }
 
-func NewHashSet(args ...interface{}) *HashSet {
-	elements := make(map[interface{}]void, len(args))
-	for _, v := range args {
-		elements[v] = void{}
-	}
-	return &HashSet{hash: elements}
-}
-
-func (hs *HashSet) Add(arg interface{}) bool {
+func (hs *HashSet) Add(element interface{}) bool {
 	hs.mutex.Lock()
 	defer func() {
-		hs.hash[arg] = void{}
+		hs.hash[element] = void{}
 		hs.mutex.Unlock()
 	}()
-	_, ok := hs.hash[arg]
+	_, ok := hs.hash[element]
 	return !ok
 }
 
-func (hs *HashSet) AddAll(args ...interface{}) {
+func (hs *HashSet) AddAll(elements ...interface{}) {
 	hs.mutex.Lock()
-	for _, v := range args {
+	for _, v := range elements {
 		hs.hash[v] = void{}
 	}
 	hs.mutex.Unlock()
@@ -82,17 +82,17 @@ func (hs *HashSet) Clear() {
 	hs.mutex.Unlock()
 }
 
-func (hs *HashSet) Contains(arg interface{}) bool {
+func (hs *HashSet) Contains(element interface{}) bool {
 	hs.mutex.RLock()
 	defer hs.mutex.RUnlock()
-	_, ok := hs.hash[arg]
+	_, ok := hs.hash[element]
 	return ok
 }
 
-func (hs *HashSet) ContainsAll(args ...interface{}) bool {
+func (hs *HashSet) ContainsAll(elements ...interface{}) bool {
 	hs.mutex.RLock()
 	defer hs.mutex.RUnlock()
-	for _, v := range args {
+	for _, v := range elements {
 		if _, ok := hs.hash[v]; !ok {
 			return false
 		}
@@ -161,6 +161,12 @@ func (hs *HashSet) IsEmpty() bool {
 	return len(hs.hash) == 0
 }
 
+func (hs *HashSet) IsNotEmpty() bool {
+	hs.mutex.RLock()
+	defer hs.mutex.RUnlock()
+	return len(hs.hash) > 0
+}
+
 func (hs *HashSet) Join(separator string) string {
 	hs.mutex.RLock()
 	defer hs.mutex.RUnlock()
@@ -182,17 +188,29 @@ func (hs *HashSet) Join(separator string) string {
 	}
 }
 
-func (hs *HashSet) Remove(arg interface{}) bool {
+func (hs *HashSet) Map(fn func(interface{}) interface{}) []interface{} {
+	hs.mutex.RLock()
+	defer hs.mutex.RUnlock()
+	array := make([]interface{}, len(hs.hash))
+	i := 0
+	for k := range hs.hash {
+		array[i] = fn(k)
+		i++
+	}
+	return array
+}
+
+func (hs *HashSet) Remove(element interface{}) bool {
 	hs.mutex.Lock()
-	defer delete(hs.hash, arg)
+	defer delete(hs.hash, element)
 	defer hs.mutex.Unlock()
-	_, ok := hs.hash[arg]
+	_, ok := hs.hash[element]
 	return ok
 }
 
-func (hs *HashSet) RemoveAll(args ...interface{}) {
+func (hs *HashSet) RemoveAll(elements ...interface{}) {
 	hs.mutex.Lock()
-	for _, v := range args {
+	for _, v := range elements {
 		delete(hs.hash, v)
 	}
 	hs.mutex.Unlock()
@@ -210,7 +228,7 @@ func (hs *HashSet) RetainAll(other *HashSet) {
 	other.mutex.RUnlock()
 }
 
-func (hs *HashSet) Size() interface{} {
+func (hs *HashSet) Size() int {
 	hs.mutex.RLock()
 	defer hs.mutex.RUnlock()
 	return len(hs.hash)

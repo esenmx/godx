@@ -4,9 +4,11 @@ Yet another boring but `simple` and `efficient` Golang implementation of popular
 
 #### Why this package? What's the difference between [gods](https://github.com/emirpasic/gods?) and `godx`?
 
-Well, most of the time you'll go with `gods` package because of your niche logic will require thread-safety at higher
+Well, first, I need it :sweat_smile:
+
+Second, most of the time you should go with `gods` package because of your niche logic will require thread-safety at higher
 level. On the other hand, sometimes a `thread-safe` standard collection can do a big favor for you. That's where `godx`
-participates.
+comes in.
 
 Another important point is, while `gods` has only essential built-in methods, `godx`
 does not directly re-implements but
@@ -19,23 +21,18 @@ built-in methods implemented.
 **`gods` HashSet interface**:
 
 ```go
-type Set interface {
 Add(elements ...interface{})
 Remove(elements ...interface{})
 Contains(elements ...interface{}) bool
-
-containers.Container
-// Empty() bool
-// Size() int
-// Clear()
-// Values() []interface{}
-}
+Empty() bool
+Size() int
+Clear()
+Values() []interface{}
 ```
 
 **`godx` HashSet interface**:
 
 ```go
-type HashSetInterface interface {
 Add(interface{}) bool
 AddAll(...interface{})
 Any(func (interface{}) bool) bool
@@ -55,16 +52,16 @@ Size() interface{}
 ToArray() []interface{}
 Union(*HashSet) *HashSet
 Where(func (interface{}) bool) *HashSet
-}
 ```
 
-**other methods also incoming, especially after with long waited `generic` feature.*
+**other methods also incoming, especially with long awaited `generics` feature.*
 
 As you see, `godx` has much more built-in methods and that may make possible to reduce your logic into an already
-packaged collection in some cases, which is big win for your productivity.
+packaged collection in some cases, which is a big win for your productivity.
 
 ### Progress Tracker:
 
 - [X] HashSet
+- [ ] TreeSet
 
 #### Others are coming...
