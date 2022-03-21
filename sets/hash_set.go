@@ -8,8 +8,263 @@ import (
 )
 
 type HashSet struct {
-	hash  map[interface{}]void
+	hash  map[interface{}]struct{}
 	mutex sync.RWMutex
+}
+
+func NewHashSet(elements ...interface{}) *HashSet {
+	hash := make(map[interface{}]struct{}, len(elements))
+	for _, v := range elements {
+		hash[v] = struct{}{}
+	}
+	return &HashSet{hash: hash}
+}
+
+func assertHashSetInterface() {
+	var _ HashSetInterface = (*HashSet)(nil)
+}
+
+func (r *HashSet) Add(element interface{}) bool {
+	r.mutex.Lock()
+	defer func() {
+		r.hash[element] = struct{}{}
+		r.mutex.Unlock()
+	}()
+
+	_, ok := r.hash[element]
+	return !ok
+}
+
+func (r *HashSet) AddAll(elements ...interface{}) {
+	r.mutex.Lock()
+	for _, v := range elements {
+		r.hash[v] = struct{}{}
+	}
+	r.mutex.Unlock()
+}
+
+func (r *HashSet) Any(fn func(interface{}) bool) bool {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	for k := range r.hash {
+		if fn(k) {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *HashSet) Clear() {
+	r.mutex.Lock()
+	r.hash = make(map[interface{}]struct{})
+	r.mutex.Unlock()
+}
+
+func (r *HashSet) Contains(element interface{}) bool {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	_, ok := r.hash[element]
+	return ok
+}
+
+func (r *HashSet) ContainsAll(elements ...interface{}) bool {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	for _, v := range elements {
+		if _, ok := r.hash[v]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func (r *HashSet) Difference(o *HashSet) *HashSet {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	o.mutex.RLock()
+	defer o.mutex.RUnlock()
+
+	diff := NewHashSet()
+	for k := range r.hash {
+		if _, ok := o.hash[k]; !ok {
+			diff.hash[k] = struct{}{}
+		}
+	}
+	return diff
+}
+
+func (r *HashSet) Every(fn func(interface{}) bool) bool {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	for k := range r.hash {
+		if !fn(k) {
+			return false
+		}
+	}
+	return true
+}
+
+func (r *HashSet) ForEach(fn func(interface{})) {
+	r.mutex.RLock()
+	for k := range r.hash {
+		fn(k)
+	}
+	r.mutex.RUnlock()
+}
+
+func (r *HashSet) Intersection(other *HashSet) *HashSet {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	other.mutex.RLock()
+	defer other.mutex.RUnlock()
+
+	intersection := NewHashSet()
+	if len(r.hash) > len(other.hash) {
+		for k := range other.hash {
+			if _, ok := r.hash[k]; ok {
+				intersection.hash[k] = struct{}{}
+			}
+		}
+	} else {
+		for k := range r.hash {
+			if _, ok := other.hash[k]; ok {
+				intersection.hash[k] = struct{}{}
+			}
+		}
+	}
+	return intersection
+}
+
+func (r *HashSet) IsEmpty() bool {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	return len(r.hash) == 0
+}
+
+func (r *HashSet) IsNotEmpty() bool {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	return len(r.hash) > 0
+}
+
+func (r *HashSet) Join(separator string) string {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	var builder strings.Builder
+	switch len(r.hash) {
+	case 0:
+		return ""
+	case 1:
+		for k := range r.hash {
+			builder.WriteString(fmt.Sprintf("%v", k))
+		}
+		return builder.String()
+	default:
+		for k := range r.hash {
+			builder.WriteString(fmt.Sprintf("%v%s", k, separator))
+		}
+		str := builder.String()
+		return str[:len(str)-len(separator)]
+	}
+}
+
+func (r *HashSet) Map(fn func(interface{}) interface{}) []interface{} {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	array := make([]interface{}, len(r.hash))
+	i := 0
+	for k := range r.hash {
+		array[i] = fn(k)
+		i++
+	}
+	return array
+}
+
+func (r *HashSet) Remove(element interface{}) bool {
+	r.mutex.Lock()
+	defer delete(r.hash, element)
+	defer r.mutex.Unlock()
+	_, ok := r.hash[element]
+	return ok
+}
+
+func (r *HashSet) RemoveAll(elements ...interface{}) {
+	r.mutex.Lock()
+	for _, v := range elements {
+		delete(r.hash, v)
+	}
+	r.mutex.Unlock()
+}
+
+func (r *HashSet) RetainAll(other *HashSet) {
+	r.mutex.Lock()
+	other.mutex.RLock()
+	for k := range r.hash {
+		if _, ok := other.hash[k]; !ok {
+			delete(r.hash, k)
+		}
+	}
+	r.mutex.Unlock()
+	other.mutex.RUnlock()
+}
+
+func (r *HashSet) Size() int {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	return len(r.hash)
+}
+
+func (r *HashSet) ToArray() []interface{} {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	array := make([]interface{}, len(r.hash))
+	i := 0
+	for k := range r.hash {
+		array[i] = k
+		i++
+	}
+	return array
+}
+
+func (r *HashSet) Union(other *HashSet) *HashSet {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	other.mutex.RLock()
+	defer other.mutex.RUnlock()
+
+	union := NewHashSet()
+	for k := range r.hash {
+		union.hash[k] = struct{}{}
+	}
+	for k := range other.hash {
+		union.hash[k] = struct{}{}
+	}
+	return union
+}
+
+func (r *HashSet) Where(fn func(interface{}) bool) *HashSet {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	where := NewHashSet()
+	for k := range r.hash {
+		if fn(k) {
+			where.hash[k] = struct{}{}
+		}
+	}
+	return where
+}
+
+func (r *HashSet) String() string {
+	return fmt.Sprintf("HashSet{%s}", r.Join(", "))
 }
 
 type HashSetInterface interface {
@@ -33,246 +288,4 @@ type HashSetInterface interface {
 	ToArray() []interface{}
 	Union(*HashSet) *HashSet
 	Where(func(interface{}) bool) *HashSet
-}
-
-func NewHashSet(elements ...interface{}) *HashSet {
-	hash := make(map[interface{}]void, len(elements))
-	for _, v := range elements {
-		hash[v] = void{}
-	}
-	return &HashSet{hash: hash}
-}
-
-func assertHashSetInterface() {
-	var _ HashSetInterface = (*HashSet)(nil)
-}
-
-func (hs *HashSet) Add(element interface{}) bool {
-	hs.mutex.Lock()
-	defer func() {
-		hs.hash[element] = void{}
-		hs.mutex.Unlock()
-	}()
-	_, ok := hs.hash[element]
-	return !ok
-}
-
-func (hs *HashSet) AddAll(elements ...interface{}) {
-	hs.mutex.Lock()
-	for _, v := range elements {
-		hs.hash[v] = void{}
-	}
-	hs.mutex.Unlock()
-}
-
-func (hs *HashSet) Any(fn func(interface{}) bool) bool {
-	hs.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	for k := range hs.hash {
-		if fn(k) {
-			return true
-		}
-	}
-	return false
-}
-
-func (hs *HashSet) Clear() {
-	hs.mutex.Lock()
-	hs.hash = make(map[interface{}]void)
-	hs.mutex.Unlock()
-}
-
-func (hs *HashSet) Contains(element interface{}) bool {
-	hs.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	_, ok := hs.hash[element]
-	return ok
-}
-
-func (hs *HashSet) ContainsAll(elements ...interface{}) bool {
-	hs.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	for _, v := range elements {
-		if _, ok := hs.hash[v]; !ok {
-			return false
-		}
-	}
-	return true
-}
-
-func (hs *HashSet) Difference(o *HashSet) *HashSet {
-	hs.mutex.RLock()
-	o.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	defer o.mutex.RUnlock()
-	diff := NewHashSet()
-	for k := range hs.hash {
-		if _, ok := o.hash[k]; !ok {
-			diff.hash[k] = void{}
-		}
-	}
-	return diff
-}
-
-func (hs *HashSet) Every(fn func(interface{}) bool) bool {
-	hs.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	for k := range hs.hash {
-		if !fn(k) {
-			return false
-		}
-	}
-	return true
-}
-
-func (hs *HashSet) ForEach(fn func(interface{})) {
-	hs.mutex.RLock()
-	for k := range hs.hash {
-		fn(k)
-	}
-	hs.mutex.RUnlock()
-}
-
-func (hs *HashSet) Intersection(other *HashSet) *HashSet {
-	hs.mutex.RLock()
-	other.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	defer other.mutex.RUnlock()
-	intersection := NewHashSet()
-	if len(hs.hash) > len(other.hash) {
-		for k := range other.hash {
-			if _, ok := hs.hash[k]; ok {
-				intersection.hash[k] = void{}
-			}
-		}
-	} else {
-		for k := range hs.hash {
-			if _, ok := other.hash[k]; ok {
-				intersection.hash[k] = void{}
-			}
-		}
-	}
-	return intersection
-}
-
-func (hs *HashSet) IsEmpty() bool {
-	hs.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	return len(hs.hash) == 0
-}
-
-func (hs *HashSet) IsNotEmpty() bool {
-	hs.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	return len(hs.hash) > 0
-}
-
-func (hs *HashSet) Join(separator string) string {
-	hs.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	var builder strings.Builder
-	switch len(hs.hash) {
-	case 0:
-		return ""
-	case 1:
-		for k := range hs.hash {
-			builder.WriteString(fmt.Sprintf("%v", k))
-		}
-		return builder.String()
-	default:
-		for k := range hs.hash {
-			builder.WriteString(fmt.Sprintf("%v%s", k, separator))
-		}
-		str := builder.String()
-		return str[:len(str)-len(separator)]
-	}
-}
-
-func (hs *HashSet) Map(fn func(interface{}) interface{}) []interface{} {
-	hs.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	array := make([]interface{}, len(hs.hash))
-	i := 0
-	for k := range hs.hash {
-		array[i] = fn(k)
-		i++
-	}
-	return array
-}
-
-func (hs *HashSet) Remove(element interface{}) bool {
-	hs.mutex.Lock()
-	defer delete(hs.hash, element)
-	defer hs.mutex.Unlock()
-	_, ok := hs.hash[element]
-	return ok
-}
-
-func (hs *HashSet) RemoveAll(elements ...interface{}) {
-	hs.mutex.Lock()
-	for _, v := range elements {
-		delete(hs.hash, v)
-	}
-	hs.mutex.Unlock()
-}
-
-func (hs *HashSet) RetainAll(other *HashSet) {
-	hs.mutex.Lock()
-	other.mutex.RLock()
-	for k := range hs.hash {
-		if _, ok := other.hash[k]; !ok {
-			delete(hs.hash, k)
-		}
-	}
-	hs.mutex.Unlock()
-	other.mutex.RUnlock()
-}
-
-func (hs *HashSet) Size() int {
-	hs.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	return len(hs.hash)
-}
-
-func (hs *HashSet) ToArray() []interface{} {
-	hs.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	array := make([]interface{}, len(hs.hash))
-	i := 0
-	for k := range hs.hash {
-		array[i] = k
-		i++
-	}
-	return array
-}
-
-func (hs *HashSet) Union(other *HashSet) *HashSet {
-	hs.mutex.RLock()
-	other.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	defer other.mutex.RUnlock()
-	union := NewHashSet()
-	for k := range hs.hash {
-		union.hash[k] = void{}
-	}
-	for k := range other.hash {
-		union.hash[k] = void{}
-	}
-	return union
-}
-
-func (hs *HashSet) Where(fn func(interface{}) bool) *HashSet {
-	hs.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	where := NewHashSet()
-	for k := range hs.hash {
-		if fn(k) {
-			where.hash[k] = void{}
-		}
-	}
-	return where
-}
-
-func (hs *HashSet) String() string {
-	return fmt.Sprintf("HashSet{%s}", hs.Join(", "))
 }

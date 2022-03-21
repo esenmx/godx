@@ -1,22 +1,16 @@
 # GO Data Structures
 
-Yet another boring but `simple` and `efficient` Golang implementation of popular data structures with `thread-safety`.
+Data structures implemented with `golang` with optional `thread-safety`.
 
-#### Why this package? What's the difference between [gods](https://github.com/emirpasic/gods?) and `godx`?
+### What's the difference between [gods](https://github.com/emirpasic/gods?) and `godx`?
 
-Well, first, I need it :sweat_smile:
+Simple, optional `thread-safe` data structures types and wider interfaces.
 
-Second, most of the time you should go with `gods` package because of your niche logic will require thread-safety at higher
-level. On the other hand, sometimes a `thread-safe` standard collection can do a big favor for you. That's where `godx`
-comes in.
+Interface
+references: [Java/Collections](https://docs.oracle.com/javase/7/docs/api/java/util/Collections.html)
+& [Dart/Collection](https://pub.dev/packages/collection)
 
-Another important point is, while `gods` has only essential built-in methods, `godx`
-does not directly re-implements but
-references [Java/Collections](https://docs.oracle.com/javase/7/docs/api/java/util/Collections.html)
-& [Dart/Collection](https://pub.dev/packages/collection) interfaces in terms of functionality where many convenient
-built-in methods implemented.
-
-#### A simple example comparison of `gods` & `godx`:
+An example comparison:
 
 **`gods` HashSet interface**:
 
@@ -56,12 +50,7 @@ Where(func (interface{}) bool) *HashSet
 
 **other methods also incoming, especially with long awaited `generics` feature.*
 
-As you see, `godx` has much more built-in methods and that may make possible to reduce your logic into an already
-packaged collection in some cases, which is a big win for your productivity.
-
 ### Progress Tracker:
 
 - [X] HashSet
 - [ ] TreeSet
-
-#### Others are coming...
