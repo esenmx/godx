@@ -10,7 +10,7 @@ var entries = []Entry{{1, "1"}, {2, "2"}, {3, "3"}}
 
 func TestHashMap(t *testing.T) {
 	t.Run("Core/Put/Remove/ContainsKey/ContainsValue", func(t *testing.T) {
-		hs := NewHashMapFromEntries(Entry{1, "a"})
+		hs := NewMapFromEntries(Entry{1, "a"})
 		require.Equal(t, 1, hs.Size())
 		require.True(t, hs.ContainsKey(1))
 		require.False(t, hs.ContainsKey(42))
@@ -29,7 +29,7 @@ func TestHashMap(t *testing.T) {
 		require.False(t, hs.IsNotEmpty())
 	})
 	t.Run("Entries/Keys/Values", func(t *testing.T) {
-		hs := NewHashMapFromArray(
+		hs := NewMapFromArray(
 			[]interface{}{1, 2, 3},
 			func(element interface{}) (result interface{}) { return element },
 			func(element interface{}) (result interface{}) { return strconv.Itoa(element.(int)) },
@@ -39,7 +39,7 @@ func TestHashMap(t *testing.T) {
 		require.ElementsMatch(t, []string{"1", "2", "3"}, hs.Values())
 	})
 	t.Run("AddAll/AddEntries/ForEach/PutIfAbsent/RemoveWhere", func(t *testing.T) {
-		hs := NewHashMap()
+		hs := NewMap()
 		hs.AddEntries(entries)
 		require.Equal(t, 3, hs.Size())
 		var sum int
@@ -61,7 +61,7 @@ func TestHashMap(t *testing.T) {
 		})
 		require.Equal(t, 1, hs.Size())
 		require.True(t, hs.ContainsKey(4))
-		nhs := NewHashMapFromEntries(entries...)
+		nhs := NewMapFromEntries(entries...)
 		hs.AddAll(nhs)
 		require.Equal(t, 4, hs.Size())
 		require.Subset(t, hs.Entries(), entries)

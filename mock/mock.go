@@ -1,4 +1,4 @@
-package pkg
+package mock
 
 import "math/rand"
 

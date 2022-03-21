@@ -2,32 +2,29 @@ package sets
 
 import (
 	"fmt"
-	"github.com/softronaut/godx/pkg"
 	"strings"
 	"sync"
 )
 
-type HashSet struct {
-	hash  map[interface{}]struct{}
+type void struct{}
+
+type Set[T comparable] struct {
+	hash  map[T]void
 	mutex sync.RWMutex
 }
 
-func NewHashSet(elements ...interface{}) *HashSet {
-	hash := make(map[interface{}]struct{}, len(elements))
+func NewSet[T comparable](elements ...T) *Set[T] {
+	hash := make(map[T]void, len(elements))
 	for _, v := range elements {
-		hash[v] = struct{}{}
+		hash[v] = void{}
 	}
-	return &HashSet{hash: hash}
+	return &Set[T]{hash: hash}
 }
 
-func assertHashSetInterface() {
-	var _ HashSetInterface = (*HashSet)(nil)
-}
-
-func (r *HashSet) Add(element interface{}) bool {
+func (r *Set[T]) Add(element T) bool {
 	r.mutex.Lock()
 	defer func() {
-		r.hash[element] = struct{}{}
+		r.hash[element] = void{}
 		r.mutex.Unlock()
 	}()
 
@@ -35,15 +32,15 @@ func (r *HashSet) Add(element interface{}) bool {
 	return !ok
 }
 
-func (r *HashSet) AddAll(elements ...interface{}) {
+func (r *Set[T]) AddAll(elements ...T) {
 	r.mutex.Lock()
 	for _, v := range elements {
-		r.hash[v] = struct{}{}
+		r.hash[v] = void{}
 	}
 	r.mutex.Unlock()
 }
 
-func (r *HashSet) Any(fn func(interface{}) bool) bool {
+func (r *Set[T]) Any(fn func(T) bool) bool {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
@@ -55,13 +52,13 @@ func (r *HashSet) Any(fn func(interface{}) bool) bool {
 	return false
 }
 
-func (r *HashSet) Clear() {
+func (r *Set[T]) Clear() {
 	r.mutex.Lock()
-	r.hash = make(map[interface{}]struct{})
+	r.hash = make(map[T]void)
 	r.mutex.Unlock()
 }
 
-func (r *HashSet) Contains(element interface{}) bool {
+func (r *Set[T]) Contains(element T) bool {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
@@ -69,7 +66,7 @@ func (r *HashSet) Contains(element interface{}) bool {
 	return ok
 }
 
-func (r *HashSet) ContainsAll(elements ...interface{}) bool {
+func (r *Set[T]) ContainsAll(elements ...T) bool {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
@@ -81,23 +78,23 @@ func (r *HashSet) ContainsAll(elements ...interface{}) bool {
 	return true
 }
 
-func (r *HashSet) Difference(o *HashSet) *HashSet {
+func (r *Set[T]) Difference(o *Set[T]) *Set[T] {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
 	o.mutex.RLock()
 	defer o.mutex.RUnlock()
 
-	diff := NewHashSet()
+	diff := NewSet[T]()
 	for k := range r.hash {
 		if _, ok := o.hash[k]; !ok {
-			diff.hash[k] = struct{}{}
+			diff.hash[k] = void{}
 		}
 	}
 	return diff
 }
 
-func (r *HashSet) Every(fn func(interface{}) bool) bool {
+func (r *Set[T]) Every(fn func(T) bool) bool {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
@@ -109,7 +106,7 @@ func (r *HashSet) Every(fn func(interface{}) bool) bool {
 	return true
 }
 
-func (r *HashSet) ForEach(fn func(interface{})) {
+func (r *Set[T]) ForEach(fn func(T)) {
 	r.mutex.RLock()
 	for k := range r.hash {
 		fn(k)
@@ -117,43 +114,43 @@ func (r *HashSet) ForEach(fn func(interface{})) {
 	r.mutex.RUnlock()
 }
 
-func (r *HashSet) Intersection(other *HashSet) *HashSet {
+func (r *Set[T]) Intersection(other *Set[T]) *Set[T] {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
 	other.mutex.RLock()
 	defer other.mutex.RUnlock()
 
-	intersection := NewHashSet()
+	intersection := NewSet[T]()
 	if len(r.hash) > len(other.hash) {
 		for k := range other.hash {
 			if _, ok := r.hash[k]; ok {
-				intersection.hash[k] = struct{}{}
+				intersection.hash[k] = void{}
 			}
 		}
 	} else {
 		for k := range r.hash {
 			if _, ok := other.hash[k]; ok {
-				intersection.hash[k] = struct{}{}
+				intersection.hash[k] = void{}
 			}
 		}
 	}
 	return intersection
 }
 
-func (r *HashSet) IsEmpty() bool {
+func (r *Set[T]) IsEmpty() bool {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 	return len(r.hash) == 0
 }
 
-func (r *HashSet) IsNotEmpty() bool {
+func (r *Set[T]) IsNotEmpty() bool {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 	return len(r.hash) > 0
 }
 
-func (r *HashSet) Join(separator string) string {
+func (r *Set[T]) Join(separator string) string {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
@@ -175,10 +172,10 @@ func (r *HashSet) Join(separator string) string {
 	}
 }
 
-func (r *HashSet) Map(fn func(interface{}) interface{}) []interface{} {
+func (r *Set[T]) Map(fn func(T) T) []T {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-	array := make([]interface{}, len(r.hash))
+	array := make([]T, len(r.hash))
 	i := 0
 	for k := range r.hash {
 		array[i] = fn(k)
@@ -187,7 +184,7 @@ func (r *HashSet) Map(fn func(interface{}) interface{}) []interface{} {
 	return array
 }
 
-func (r *HashSet) Remove(element interface{}) bool {
+func (r *Set[T]) Remove(element T) bool {
 	r.mutex.Lock()
 	defer delete(r.hash, element)
 	defer r.mutex.Unlock()
@@ -195,7 +192,7 @@ func (r *HashSet) Remove(element interface{}) bool {
 	return ok
 }
 
-func (r *HashSet) RemoveAll(elements ...interface{}) {
+func (r *Set[T]) RemoveAll(elements ...T) {
 	r.mutex.Lock()
 	for _, v := range elements {
 		delete(r.hash, v)
@@ -203,7 +200,7 @@ func (r *HashSet) RemoveAll(elements ...interface{}) {
 	r.mutex.Unlock()
 }
 
-func (r *HashSet) RetainAll(other *HashSet) {
+func (r *Set[T]) RetainAll(other *Set[T]) {
 	r.mutex.Lock()
 	other.mutex.RLock()
 	for k := range r.hash {
@@ -215,16 +212,16 @@ func (r *HashSet) RetainAll(other *HashSet) {
 	other.mutex.RUnlock()
 }
 
-func (r *HashSet) Size() int {
+func (r *Set[T]) Size() int {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 	return len(r.hash)
 }
 
-func (r *HashSet) ToArray() []interface{} {
+func (r *Set[T]) ToArray() []T {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-	array := make([]interface{}, len(r.hash))
+	array := make([]T, len(r.hash))
 	i := 0
 	for k := range r.hash {
 		array[i] = k
@@ -233,59 +230,64 @@ func (r *HashSet) ToArray() []interface{} {
 	return array
 }
 
-func (r *HashSet) Union(other *HashSet) *HashSet {
+func (r *Set[T]) Union(other *Set[T]) *Set[T] {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
 	other.mutex.RLock()
 	defer other.mutex.RUnlock()
 
-	union := NewHashSet()
+	union := NewSet[T]()
 	for k := range r.hash {
-		union.hash[k] = struct{}{}
+		union.hash[k] = void{}
 	}
 	for k := range other.hash {
-		union.hash[k] = struct{}{}
+		union.hash[k] = void{}
 	}
 	return union
 }
 
-func (r *HashSet) Where(fn func(interface{}) bool) *HashSet {
+func (r *Set[T]) Where(fn func(T) bool) *Set[T] {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
-	where := NewHashSet()
+	where := NewSet[T]()
 	for k := range r.hash {
 		if fn(k) {
-			where.hash[k] = struct{}{}
+			where.hash[k] = void{}
 		}
 	}
 	return where
 }
 
-func (r *HashSet) String() string {
-	return fmt.Sprintf("HashSet{%s}", r.Join(", "))
+func (r *Set[T]) String() string {
+	return fmt.Sprintf("Set{%s}", r.Join(", "))
 }
 
-type HashSetInterface interface {
-	pkg.Interface
-	Add(interface{}) bool
-	AddAll(other ...interface{})
-	Any(predicate func(interface{}) bool) bool
+type HashSetInterface[T comparable] interface {
+	Add(T) bool
+	AddAll(other ...T)
+	Any(predicate func(T) bool) bool
 	Clear()
-	Contains(element interface{}) bool
-	ContainsAll(...interface{}) bool
-	Difference(*HashSet) *HashSet
-	Every(func(interface{}) bool) bool
-	ForEach(func(interface{}))
-	Intersection(*HashSet) *HashSet
+	Contains(element T) bool
+	ContainsAll(...T) bool
+	Difference(*Set[T]) *Set[T]
+	Every(func(T) bool) bool
+	ForEach(func(T))
+	Intersection(*Set[T]) *Set[T]
+	IsEmpty() bool
+	IsNotEmpty() bool
 	Join(string) string
-	Map(func(interface{}) interface{}) []interface{}
-	Remove(interface{}) bool
-	RemoveAll(...interface{})
-	RetainAll(set *HashSet)
+	Map(func(T) T) []T
+	Remove(T) bool
+	RemoveAll(...T)
+	RetainAll(set *Set[T])
 	Size() int
-	ToArray() []interface{}
-	Union(*HashSet) *HashSet
-	Where(func(interface{}) bool) *HashSet
+	ToArray() []T
+	Union(*Set[T]) *Set[T]
+	Where(func(T) bool) *Set[T]
+}
+
+func assertHashSetInterface[T comparable]() {
+	var _ HashSetInterface[T] = (*Set[T])(nil)
 }
