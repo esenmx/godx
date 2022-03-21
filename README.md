@@ -1,4 +1,6 @@
-# GO Data Structures
+# Under development :rocket:
+
+# godx( GO Data Structures + Mutex)
 
 Data structures implemented with `golang` with optional `thread-safety`.
 
