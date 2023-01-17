@@ -172,17 +172,17 @@ func (r *Set[T]) Join(separator string) string {
 	}
 }
 
-func (r *Set[T]) Map(fn func(T) T) []T {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
-	array := make([]T, len(r.hash))
-	i := 0
-	for k := range r.hash {
-		array[i] = fn(k)
-		i++
-	}
-	return array
-}
+//func (r *Set[T]) Map[M any](fn func(T) M) []M {
+//	r.mutex.RLock()
+//	defer r.mutex.RUnlock()
+//	array := make([]M, len(r.hash))
+//	i := 0
+//	for k := range r.hash {
+//		array[i] = fn(k)
+//		i++
+//	}
+//	return array
+//}
 
 func (r *Set[T]) Remove(element T) bool {
 	r.mutex.Lock()
@@ -278,7 +278,7 @@ type HashSetInterface[T comparable] interface {
 	IsEmpty() bool
 	IsNotEmpty() bool
 	Join(string) string
-	Map(func(T) T) []T
+	//Map(func(T) T) []T
 	Remove(T) bool
 	RemoveAll(...T)
 	RetainAll(set *Set[T])

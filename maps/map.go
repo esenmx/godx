@@ -1,9 +1,16 @@
 package maps
 
 import (
-	"github.com/softronaut/godx/pkg"
 	"sync"
 )
+
+type Entry[K comparable, V any] struct {
+	key   K
+	value V
+}
+
+func (e *Entry[K, V]) Key() K   { return e.key }
+func (e *Entry[K, V]) Value() V { return e.value }
 
 type Map[K comparable, V comparable] struct {
 	hash  map[K]V
@@ -22,13 +29,13 @@ func NewMapFromEntries[K comparable, V comparable](entries ...Entry[K, V]) *Map[
 	return &Map[K, V]{hash: hash}
 }
 
-func NewMapFromArray[K comparable, V comparable](array []any, key pkg.Compute[K], value pkg.Compute[V]) *Map[K, V] {
-	hash := make(map[K]V, len(array))
-	for _, v := range array {
-		hash[key(v)] = value(v)
-	}
-	return &Map[K, V]{hash: hash}
-}
+//func NewMapFromArray[K comparable, V comparable](array []V, key pkg.Compute[K], value pkg.Compute[V]) *Map[K, V] {
+//	hash := make(map[K]V, len(array))
+//	for _, v := range array {
+//		hash[key(v)] = value(v)
+//	}
+//	return &Map[K, V]{hash: hash}
+//}
 
 func (hs *Map[K, V]) IsEmpty() bool {
 	hs.mutex.RLock()
@@ -52,7 +59,7 @@ func (hs *Map[K, V]) AddAll(other *Map[K, V]) {
 	other.mutex.RUnlock()
 }
 
-func (hs *Map[K, V]) AddEntries(entries []Entry) {
+func (hs *Map[K, V]) AddEntries(entries []Entry[K, V]) {
 	hs.mutex.Lock()
 	for _, v := range entries {
 		hs.hash[v.key] = v.value
@@ -87,13 +94,13 @@ func (hs *Map[K, V]) ContainsValue(value V) bool {
 
 }
 
-func (hs *Map[K, V]) Entries() []Entry {
+func (hs *Map[K, V]) Entries() []Entry[K, V] {
 	hs.mutex.RLock()
 	defer hs.mutex.RUnlock()
-	entries := make([]Entry, len(hs.hash))
+	entries := make([]Entry[K, V], len(hs.hash))
 	i := 0
 	for k, v := range hs.hash {
-		entries[i] = Entry{key: k, value: v}
+		entries[i] = Entry[K, V]{key: k, value: v}
 		i++
 	}
 	return entries
@@ -127,13 +134,14 @@ func (hs *Map[K, V]) Put(key K, value V) V {
 	return old
 }
 
-func (hs *Map[K, V]) PutIfAbsent(key K, put func() V) V {
+func (hs *Map[K, V]) PutIfAbsent(key K, put func() V) *V {
 	hs.mutex.RLock()
 	defer hs.mutex.RUnlock()
 	if v, ok := hs.hash[key]; ok {
-		return v
+		return &v
 	}
-	hs.hash[key] = put()
+	v := put()
+	hs.hash[key] = v
 	return nil
 }
 
@@ -175,17 +183,17 @@ func (hs *Map[K, V]) Values() []V {
 
 type MapInterface[K comparable, V comparable] interface {
 	AddAll(other *Map[K, V])
-	AddEntries(entries []Entry)
+	AddEntries(entries []Entry[K, V])
 	Clear()
 	ContainsKey(key K) bool
 	ContainsValue(value V) bool
-	Entries() []Entry
+	Entries() []Entry[K, V]
 	ForEach(do func(key K, value V))
 	IsEmpty() bool
 	IsNotEmpty() bool
 	Keys() []K
 	Put(key K, value V) V
-	PutIfAbsent(key K, put func() V) V
+	PutIfAbsent(key K, put func() V) *V
 	Remove(key K) (exists bool)
 	RemoveWhere(predicate func(key K, value V) bool)
 	Size() int
