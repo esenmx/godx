@@ -186,7 +186,7 @@ func (r *Set[T]) Join(separator string) string {
 
 func (r *Set[T]) Remove(element T) bool {
 	r.mutex.Lock()
-	defer delete(r.hash, element)
+	defer func() { delete(r.hash, element) }()
 	defer r.mutex.Unlock()
 	_, ok := r.hash[element]
 	return ok
@@ -196,6 +196,16 @@ func (r *Set[T]) RemoveAll(elements ...T) {
 	r.mutex.Lock()
 	for _, v := range elements {
 		delete(r.hash, v)
+	}
+	r.mutex.Unlock()
+}
+
+func (r *Set[T]) RemoveWhere(test func(T) bool) {
+	r.mutex.Lock()
+	for k, _ := range r.hash {
+		if test(k) {
+			delete(r.hash, k)
+		}
 	}
 	r.mutex.Unlock()
 }

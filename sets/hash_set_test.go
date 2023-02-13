@@ -32,7 +32,7 @@ func TestMethods(t *testing.T) {
 		require.Equal(t, 1, s.Size())
 		require.True(t, s.Contains(42))
 	})
-	t.Run("AddAll/RemoveAll/ContainsAll/RetainAll", func(t *testing.T) {
+	t.Run("AddAll/RemoveAll/ContainsAll/RetainAll/RemoveWhere", func(t *testing.T) {
 		s := NewSet[int]()
 		s.AddAll(42, 21)
 		require.True(t, s.ContainsAll(42, 21))
@@ -43,6 +43,10 @@ func TestMethods(t *testing.T) {
 		s.RemoveAll(42, 21, 1)
 		require.Equal(t, 1, s.Size())
 		// todo
+		s.AddAll(21, 42)
+		s.RemoveWhere(func(i int) bool { return i%2 == 0 })
+		require.Equal(t, 1, s.Size())
+		require.True(t, s.Contains(21))
 	})
 	t.Run("Any/Every/ForEach/Where", func(t *testing.T) {
 		size := 100
