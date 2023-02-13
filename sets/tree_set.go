@@ -1,7 +1,7 @@
 package sets
 
 //import (
-//	"github.com/softronaut/godx/pkg"
+//	"github.com/esenmx/godx/pkg"
 //	"sync"
 //)
 //
