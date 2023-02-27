@@ -1,9 +1,10 @@
 package maps
 
 import (
-	"github.com/stretchr/testify/require"
 	"strconv"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 var entries = []Entry[int, string]{{1, "1"}, {2, "2"}, {3, "3"}}
@@ -14,14 +15,13 @@ func TestHashMap(t *testing.T) {
 		require.Equal(t, 1, hs.Size())
 		require.True(t, hs.ContainsKey(1))
 		require.False(t, hs.ContainsKey(42))
-		require.True(t, hs.ContainsValue("a"))
-		require.False(t, hs.ContainsValue("foo"))
+		require.Equal(t, hs.hash[1], "a")
 		require.True(t, hs.IsNotEmpty())
 		require.False(t, hs.IsEmpty())
 		hs.Put(2, "b")
 		require.Equal(t, 2, hs.Size())
 		require.True(t, hs.ContainsKey(2))
-		require.True(t, hs.ContainsValue("b"))
+		require.Equal(t, hs.hash[2], "b")
 		hs.Remove(1)
 		require.Equal(t, 1, hs.Size())
 		hs.Clear()
@@ -65,5 +65,14 @@ func TestHashMap(t *testing.T) {
 		hs.AddAll(nhs)
 		require.Equal(t, 4, hs.Size())
 		require.Subset(t, hs.Entries(), entries)
+	})
+
+	t.Run("RemoveAll", func(t *testing.T) {
+		base := map[int]string{1: "", 2: "", 3: ""}
+		hs := NewMapWithValues[int, string](base)
+		hs.RemoveAll()
+		require.Equal(t, base, hs.hash)
+		hs.RemoveAll(1, 3)
+		require.Equal(t, map[int]string{2: ""}, hs.hash)
 	})
 }

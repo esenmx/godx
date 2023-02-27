@@ -12,19 +12,27 @@ type Entry[K comparable, V any] struct {
 func (e *Entry[K, V]) Key() K   { return e.key }
 func (e *Entry[K, V]) Value() V { return e.value }
 
-type Map[K comparable, V comparable] struct {
+type Map[K comparable, V any] struct {
 	hash  map[K]V
 	mutex sync.RWMutex
 }
 
-func NewMap[K comparable, V comparable]() *Map[K, V] {
+func NewMap[K comparable, V any]() *Map[K, V] {
 	return &Map[K, V]{hash: make(map[K]V)}
 }
 
-func NewMapFromEntries[K comparable, V comparable](entries ...Entry[K, V]) *Map[K, V] {
+func NewMapWithValues[K comparable, V any](base map[K]V) *Map[K, V] {
+	m := &Map[K, V]{hash: make(map[K]V)}
+	for k, v := range base {
+		m.hash[k] = v
+	}
+	return m
+}
+
+func NewMapFromEntries[K comparable, V any](entries ...Entry[K, V]) *Map[K, V] {
 	hash := make(map[K]V, len(entries))
-	for _, v := range entries {
-		hash[v.key] = v.value
+	for _, e := range entries {
+		hash[e.key] = e.value
 	}
 	return &Map[K, V]{hash: hash}
 }
@@ -85,19 +93,19 @@ func (r *Map[K, V]) ContainsKey(key K) bool {
 	return ok
 }
 
-func (r *Map[K, V]) ContainsValue(value V) bool {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
-	var ok bool
-	for _, v := range r.hash {
-		if v == value {
-			ok = true
-			break
-		}
-	}
-	return ok
-
-}
+//func (r *Map[K, V]) ContainsValue(value V) bool {
+//	r.mutex.RLock()
+//	defer r.mutex.RUnlock()
+//	var ok bool
+//	for _, v := range r.hash {
+//		if v == value {
+//			ok = true
+//			break
+//		}
+//	}
+//	return ok
+//
+//}
 
 func (r *Map[K, V]) Entries() []Entry[K, V] {
 	r.mutex.RLock()
@@ -158,6 +166,14 @@ func (r *Map[K, V]) Remove(key K) bool {
 	return ok
 }
 
+func (r *Map[K, V]) RemoveAll(keys ...K) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	for _, k := range keys {
+		delete(r.hash, k)
+	}
+}
+
 func (r *Map[K, V]) RemoveWhere(predicate func(key K, value V) bool) {
 	r.mutex.Lock()
 	for k, v := range r.hash {
@@ -186,12 +202,12 @@ func (r *Map[K, V]) Values() []V {
 	return values
 }
 
-type MapInterface[K comparable, V comparable] interface {
+type MapInterface[K comparable, V any] interface {
 	AddAll(other *Map[K, V])
 	AddEntries(entries []Entry[K, V])
 	Clear()
 	ContainsKey(key K) bool
-	ContainsValue(value V) bool
+	//ContainsValue(value V) bool
 	Entries() []Entry[K, V]
 	ForEach(do func(key K, value V))
 	Get(key K) (V, bool)
@@ -202,11 +218,12 @@ type MapInterface[K comparable, V comparable] interface {
 	Put(key K, value V) V
 	PutIfAbsent(key K, put func() V) *V
 	Remove(key K) (exists bool)
+	RemoveAll(keys ...K)
 	RemoveWhere(predicate func(key K, value V) bool)
 	Size() int
 	Values() (values []V)
 }
 
-func assertHashMapInterface[K comparable, V comparable]() {
+func assertHashMapInterface[K comparable, V any]() {
 	var _ MapInterface[K, V] = (*Map[K, V])(nil)
 }
