@@ -29,62 +29,67 @@ func NewMapFromEntries[K comparable, V comparable](entries ...Entry[K, V]) *Map[
 	return &Map[K, V]{hash: hash}
 }
 
-//func NewMapFromArray[K comparable, V comparable](array []V, key pkg.Compute[K], value pkg.Compute[V]) *Map[K, V] {
-//	hash := make(map[K]V, len(array))
-//	for _, v := range array {
-//		hash[key(v)] = value(v)
-//	}
-//	return &Map[K, V]{hash: hash}
-//}
-
-func (hs *Map[K, V]) IsEmpty() bool {
-	hs.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	return len(hs.hash) == 0
+func (r *Map[K, V]) Get(key K) (V, bool) {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	v, ok := r.hash[key]
+	return v, ok
 }
 
-func (hs *Map[K, V]) IsNotEmpty() bool {
-	hs.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	return len(hs.hash) > 0
+func (r *Map[K, V]) Set(key K, value V) {
+	r.mutex.Lock()
+	r.hash[key] = value
+	r.mutex.Unlock()
 }
 
-func (hs *Map[K, V]) AddAll(other *Map[K, V]) {
-	hs.mutex.Lock()
+func (r *Map[K, V]) IsEmpty() bool {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	return len(r.hash) == 0
+}
+
+func (r *Map[K, V]) IsNotEmpty() bool {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	return len(r.hash) > 0
+}
+
+func (r *Map[K, V]) AddAll(other *Map[K, V]) {
+	r.mutex.Lock()
 	other.mutex.RLock()
 	for k, v := range other.hash {
-		hs.hash[k] = v
+		r.hash[k] = v
 	}
-	hs.mutex.Unlock()
+	r.mutex.Unlock()
 	other.mutex.RUnlock()
 }
 
-func (hs *Map[K, V]) AddEntries(entries []Entry[K, V]) {
-	hs.mutex.Lock()
+func (r *Map[K, V]) AddEntries(entries []Entry[K, V]) {
+	r.mutex.Lock()
 	for _, v := range entries {
-		hs.hash[v.key] = v.value
+		r.hash[v.key] = v.value
 	}
-	hs.mutex.Unlock()
+	r.mutex.Unlock()
 }
 
-func (hs *Map[K, V]) Clear() {
-	hs.mutex.Lock()
-	hs.hash = make(map[K]V)
-	hs.mutex.Unlock()
+func (r *Map[K, V]) Clear() {
+	r.mutex.Lock()
+	r.hash = make(map[K]V)
+	r.mutex.Unlock()
 }
 
-func (hs *Map[K, V]) ContainsKey(key K) bool {
-	hs.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	_, ok := hs.hash[key]
+func (r *Map[K, V]) ContainsKey(key K) bool {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	_, ok := r.hash[key]
 	return ok
 }
 
-func (hs *Map[K, V]) ContainsValue(value V) bool {
-	hs.mutex.RLock()
-	defer hs.mutex.RUnlock()
+func (r *Map[K, V]) ContainsValue(value V) bool {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
 	var ok bool
-	for _, v := range hs.hash {
+	for _, v := range r.hash {
 		if v == value {
 			ok = true
 			break
@@ -94,87 +99,87 @@ func (hs *Map[K, V]) ContainsValue(value V) bool {
 
 }
 
-func (hs *Map[K, V]) Entries() []Entry[K, V] {
-	hs.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	entries := make([]Entry[K, V], len(hs.hash))
+func (r *Map[K, V]) Entries() []Entry[K, V] {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	entries := make([]Entry[K, V], len(r.hash))
 	i := 0
-	for k, v := range hs.hash {
+	for k, v := range r.hash {
 		entries[i] = Entry[K, V]{key: k, value: v}
 		i++
 	}
 	return entries
 }
 
-func (hs *Map[K, V]) ForEach(do func(key K, value V)) {
-	hs.mutex.RLock()
-	for k, v := range hs.hash {
+func (r *Map[K, V]) ForEach(do func(key K, value V)) {
+	r.mutex.RLock()
+	for k, v := range r.hash {
 		do(k, v)
 	}
-	hs.mutex.RUnlock()
+	r.mutex.RUnlock()
 }
 
-func (hs *Map[K, V]) Keys() []K {
-	hs.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	keys := make([]K, len(hs.hash))
+func (r *Map[K, V]) Keys() []K {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	keys := make([]K, len(r.hash))
 	i := 0
-	for k := range hs.hash {
+	for k := range r.hash {
 		keys[i] = k
 		i++
 	}
 	return keys
 }
 
-func (hs *Map[K, V]) Put(key K, value V) V {
-	hs.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	old := hs.hash[key]
-	hs.hash[key] = value
+func (r *Map[K, V]) Put(key K, value V) V {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	old := r.hash[key]
+	r.hash[key] = value
 	return old
 }
 
-func (hs *Map[K, V]) PutIfAbsent(key K, put func() V) *V {
-	hs.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	if v, ok := hs.hash[key]; ok {
+func (r *Map[K, V]) PutIfAbsent(key K, put func() V) *V {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	if v, ok := r.hash[key]; ok {
 		return &v
 	}
 	v := put()
-	hs.hash[key] = v
+	r.hash[key] = v
 	return nil
 }
 
-func (hs *Map[K, V]) Remove(key K) bool {
-	hs.mutex.Lock()
-	defer hs.mutex.Unlock()
-	_, ok := hs.hash[key]
-	delete(hs.hash, key)
+func (r *Map[K, V]) Remove(key K) bool {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	_, ok := r.hash[key]
+	delete(r.hash, key)
 	return ok
 }
 
-func (hs *Map[K, V]) RemoveWhere(predicate func(key K, value V) bool) {
-	hs.mutex.Lock()
-	for k, v := range hs.hash {
+func (r *Map[K, V]) RemoveWhere(predicate func(key K, value V) bool) {
+	r.mutex.Lock()
+	for k, v := range r.hash {
 		if predicate(k, v) {
-			delete(hs.hash, k)
+			delete(r.hash, k)
 		}
 	}
-	hs.mutex.Unlock()
+	r.mutex.Unlock()
 }
 
-func (hs *Map[K, V]) Size() int {
-	hs.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	return len(hs.hash)
+func (r *Map[K, V]) Size() int {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	return len(r.hash)
 }
 
-func (hs *Map[K, V]) Values() []V {
-	hs.mutex.RLock()
-	defer hs.mutex.RUnlock()
-	values := make([]V, len(hs.hash))
+func (r *Map[K, V]) Values() []V {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	values := make([]V, len(r.hash))
 	i := 0
-	for _, v := range hs.hash {
+	for _, v := range r.hash {
 		values[i] = v
 		i++
 	}
@@ -189,6 +194,8 @@ type MapInterface[K comparable, V comparable] interface {
 	ContainsValue(value V) bool
 	Entries() []Entry[K, V]
 	ForEach(do func(key K, value V))
+	Get(key K) (V, bool)
+	Set(key K, value V)
 	IsEmpty() bool
 	IsNotEmpty() bool
 	Keys() []K
