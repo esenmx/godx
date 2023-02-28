@@ -52,10 +52,24 @@ func (r *Set[T]) Any(fn func(T) bool) bool {
 	return false
 }
 
+func (r *Set[T]) Array() []T {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	array := make([]T, len(r.hash))
+	i := 0
+	for k := range r.hash {
+		array[i] = k
+		i++
+	}
+	return array
+}
+
 func (r *Set[T]) Clear() {
 	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
 	r.hash = make(map[T]void)
-	r.mutex.Unlock()
 }
 
 func (r *Set[T]) Contains(element T) bool {
@@ -275,6 +289,7 @@ func (r *Set[T]) String() string {
 }
 
 type HashSetInterface[T comparable] interface {
+	Array() []T
 	Add(T) bool
 	AddAll(other ...T)
 	Any(predicate func(T) bool) bool
