@@ -93,20 +93,6 @@ func (r *Map[K, V]) ContainsKey(key K) bool {
 	return ok
 }
 
-//func (r *Map[K, V]) ContainsValue(value V) bool {
-//	r.mutex.RLock()
-//	defer r.mutex.RUnlock()
-//	var ok bool
-//	for _, v := range r.hash {
-//		if v == value {
-//			ok = true
-//			break
-//		}
-//	}
-//	return ok
-//
-//}
-
 func (r *Map[K, V]) Entries() []Entry[K, V] {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
@@ -190,6 +176,22 @@ func (r *Map[K, V]) Size() int {
 	return len(r.hash)
 }
 
+func (r *Map[K, V]) ToMap() *map[K]V {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	return &r.hash
+}
+
+func (r *Map[K, V]) Update(key K, update func(value V) V) bool {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	v, ok := r.hash[key]
+	if ok {
+		r.hash[key] = update(v)
+	}
+	return ok
+}
+
 func (r *Map[K, V]) Values() []V {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
@@ -207,7 +209,6 @@ type MapInterface[K comparable, V any] interface {
 	AddEntries(entries []Entry[K, V])
 	Clear()
 	ContainsKey(key K) bool
-	//ContainsValue(value V) bool
 	Entries() []Entry[K, V]
 	ForEach(do func(key K, value V))
 	Get(key K) (V, bool)
@@ -221,6 +222,8 @@ type MapInterface[K comparable, V any] interface {
 	RemoveAll(keys ...K)
 	RemoveWhere(predicate func(key K, value V) bool)
 	Size() int
+	ToMap() *map[K]V
+	Update(key K, update func(value V) V) bool
 	Values() (values []V)
 }
 

@@ -187,9 +187,9 @@ func (r *Set[T]) Join(separator string) string {
 
 func (r *Set[T]) Remove(element T) bool {
 	r.mutex.Lock()
-	defer func() { delete(r.hash, element) }()
 	defer r.mutex.Unlock()
 	_, ok := r.hash[element]
+	delete(r.hash, element)
 	return ok
 }
 
@@ -229,7 +229,7 @@ func (r *Set[T]) Size() int {
 	return len(r.hash)
 }
 
-func (r *Set[T]) ToArray() []T {
+func (r *Set[T]) ToArray() *[]T {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 	array := make([]T, len(r.hash))
@@ -238,7 +238,7 @@ func (r *Set[T]) ToArray() []T {
 		array[i] = k
 		i++
 	}
-	return array
+	return &array
 }
 
 func (r *Set[T]) Union(other *Set[T]) *Set[T] {
@@ -294,7 +294,7 @@ type HashSetInterface[T comparable] interface {
 	RemoveAll(...T)
 	RetainAll(set *Set[T])
 	Size() int
-	ToArray() []T
+	ToArray() *[]T
 	Union(*Set[T]) *Set[T]
 	Where(func(T) bool) *Set[T]
 }
